@@ -15,17 +15,18 @@ let phoneInput = document.querySelector("form #phone");
 let errPhoneMsg = document.querySelector("form .phone-err");
 //get selectors of the second form
 let plans = Array.from(document.querySelectorAll(".plan-page .plan"));
-let planPrice = document.querySelector(".plan-page .plan .price");
 let priceToggle = document.querySelector(".plan-page .btn button");
-let monthly = document.querySelector(".plan-page .monthly");
-let yearlyLabel = document.querySelector(".plan-page .yearly");
 //get selectors of the third form
 let addOns = Array.from(document.querySelectorAll(".add-ons-page .box"));
 
+let changeBtn = document.querySelector(".summary-page .change-plan");
 let totalPrice = document.querySelector(".summary-page .total span");
 
 let currentPage = 0;
 let currentStep = 0;
+let selectedPlan = {};
+let selectedAdds = {};
+let data = [];
 
 backBtn.style.opacity = "0";
 
@@ -35,32 +36,25 @@ selectAdd();
 
 // add event listeners
 nextBtn.addEventListener("click", (e) => {
-  if (
-    validNameInput(nameInput) &&
-    validEmailInput(emailInput) &&
-    validPhoneInput(phoneInput)
-  ) {
+  if (validateInputs()) {
     if (currentPage >= 0) {
       backBtn.style.opacity = "1";
     }
-    if (currentPage === 1) {
-      let hasSelected = plans.some((plan) => {
-        return plan.classList.contains("selected");
-      });
-      if (!hasSelected) {
-        alert("Please select a plan");
-        return;
-      }
+    switch (currentPage) {
+      case 1:
+        if (!plans.some((plan) => plan.classList.contains("selected"))) {
+          alert("Please select a plan");
+          return;
+        }
+        break;
+      case 2:
+        if (!addOns.some((add) => add.classList.contains("checked"))) {
+          alert("Please select an add-on");
+          return;
+        }
+        break;
     }
-    if (currentPage === 2) {
-      let hasSelected = addOns.some((add) => {
-        return add.classList.contains("checked");
-      });
-      if (!hasSelected) {
-        alert("Please select an add-on");
-        return;
-      }
-    }
+
     if (currentPage === 2) {
       let changeBtn = document.querySelector(".summary-page .change-plan");
 
@@ -135,67 +129,35 @@ function moveToNextStep(stepIndex) {
   steps[stepIndex].classList.add("active");
 }
 
-function validNameInput(nameInput) {
-  let isValid = false;
+//new valid inputs function
+function validateInputs() {
+  let namePattern = /^[a-zA-Z]+\s[a-zA-Z]+$/;
+  let emailPattern = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+  let phonePattern = /^\+1\s?[0-9]{3}\s?[0-9]{3}\s?[0-9]{3}$/;
 
-  let pattern = /^[a-zA-Z]+\s[a-zA-Z]+$/;
-  if (nameInput.value === "") {
-    nameInput.classList.add("not-valid");
-    errNameMsg.textContent = "This field is required";
-    isValid = false;
-  } else if (pattern.test(nameInput.value) === false) {
-    nameInput.classList.add("not-valid");
-    errNameMsg.textContent = "Must be a valid name";
-    isValid = false;
-  } else {
-    errNameMsg.textContent = "";
-    nameInput.classList.remove("not-valid");
-    nameInput.classList.add("valid");
-    isValid = true;
+  let isFormValid = true;
+
+  function validateInput(input, pattern, errorMsg) {
+    if (input.value === "") {
+      input.classList.add("not-valid");
+      errorMsg.textContent = "This field is required";
+      isFormValid = false;
+    } else if (pattern.test(input.value) === false) {
+      input.classList.add("not-valid");
+      errorMsg.textContent = "Invalid input";
+      isFormValid = false;
+    } else {
+      input.classList.remove("not-valid");
+      input.classList.add("valid");
+      errorMsg.textContent = "";
+    }
   }
-  return isValid;
-}
 
-function validEmailInput(emailInput) {
-  let pattern = /[a-zA-Z0-9._%+-]+@[a-z]+\.[a-z]{2,}/;
-  let isValid = false;
+  validateInput(nameInput, namePattern, errNameMsg);
+  validateInput(emailInput, emailPattern, errEmailMsg);
+  validateInput(phoneInput, phonePattern, errPhoneMsg);
 
-  if (emailInput.value === "") {
-    emailInput.classList.add("not-valid");
-    errEmailMsg.textContent = "This field is required";
-    isValid = false;
-  } else if (pattern.test(emailInput.value) === false) {
-    emailInput.classList.add("not-valid");
-    errEmailMsg.textContent = "Must be a valid email";
-    isValid = false;
-  } else {
-    errEmailMsg.textContent = "";
-    emailInput.classList.remove("not-valid");
-    emailInput.classList.add("valid");
-    isValid = true;
-  }
-  return isValid;
-}
-
-function validPhoneInput(phoneInput) {
-  let pattern = /^\+1\s?[0-9]{3}\s?[0-9]{3}\s?[0-9]{3}$/;
-  let isValid = false;
-
-  if (phoneInput.value === "") {
-    phoneInput.classList.add("not-valid");
-    errPhoneMsg.textContent = "This field is required";
-    isValid = false;
-  } else if (pattern.test(phoneInput.value) === false) {
-    phoneInput.classList.add("not-valid");
-    errPhoneMsg.textContent = "Must be a valid phone";
-    isValid = false;
-  } else {
-    errPhoneMsg.textContent = "";
-    phoneInput.classList.remove("not-valid");
-    phoneInput.classList.add("valid");
-    isValid = true;
-  }
-  return isValid;
+  return isFormValid;
 }
 
 function selectPlan() {
@@ -205,19 +167,15 @@ function selectPlan() {
         plan.classList.remove("selected");
       });
       plan.classList.add("selected");
-      const selectedPlan = {};
-      selectedPlan.name = document.querySelector(
-        ".selected .plan-name"
-      ).textContent;
-      selectedPlan.price = parseInt(
-        document.querySelector(".selected .price span").textContent
-      );
-      selectedPlan.billing = e.currentTarget.classList.contains("yearly")
-        ? "yearly"
-        : "monthly";
-
-      sessionStorage.setItem("plan", JSON.stringify(selectedPlan));
-
+      selectedPlan = {
+        name: document.querySelector(".selected .plan-name").textContent,
+        price: parseInt(
+          document.querySelector(".selected .price span").textContent
+        ),
+        billing: e.currentTarget.classList.contains("yearly")
+          ? "yearly"
+          : "monthly",
+      };
       showSelectedPlan();
     });
   });
@@ -229,13 +187,9 @@ function selectPlan() {
         plan.classList.add("yearly");
         plan.querySelector(".price span").textContent *= 10;
       });
-      if (sessionStorage.getItem("plan")) {
-        let data = JSON.parse(sessionStorage.getItem("plan"));
-        data.name = data.name;
-        data.price = data.price * 10;
-        data.billing = "yearly";
-        let newData = JSON.stringify(data);
-        sessionStorage.setItem("plan", newData);
+      if (selectedPlan) {
+        selectedPlan.price *= 10;
+        selectedPlan.billing = "yearly";
       }
     } else {
       e.currentTarget.parentNode.classList.remove("yearly");
@@ -244,35 +198,27 @@ function selectPlan() {
         plan.classList.remove("yearly");
         plan.querySelector(".price span").textContent /= 10;
       });
-      if (sessionStorage.getItem("plan")) {
-        let data = JSON.parse(sessionStorage.getItem("plan"));
-        data.name = data.name;
-        data.price = data.price / 10;
-        data.billing = "monthly";
-        let newData = JSON.stringify(data);
-        sessionStorage.setItem("plan", newData);
+      if (selectedPlan) {
+        selectedPlan.price /= 10;
+        selectedPlan.billing = "monthly";
       }
     }
+    showSelectedPlan();
   });
 }
 
-let selectedAdds = {};
-let addArr = [];
 function selectAdd() {
+  let addArr = [];
   addOns.forEach((add) => {
     add.addEventListener("click", (e) => {
       let addId = `add${add.dataset.id}`;
       let addName = add.querySelector(".add-on-name").textContent;
       let addPrice = add.querySelector(".price span").textContent;
-
       if (e.currentTarget.classList.contains("checked")) {
         e.currentTarget.classList.remove("checked");
-
-        delete addArr[selectedAdds[addId]];
         deleteObjectById(addId, addArr);
       } else {
         e.currentTarget.classList.add("checked");
-
         addArr.push({ id: addId, name: addName, price: addPrice });
       }
       showSelectedAdd(addArr);
@@ -296,7 +242,7 @@ function showSelectedPlan() {
 
   planPrice.className = "price";
 
-  let myPlan = JSON.parse(sessionStorage.getItem("plan"));
+  let myPlan = selectedPlan;
   planContent.textContent = "";
 
   planName.innerHTML = `${myPlan.name}<span>(${myPlan.billing})</span>`;
@@ -305,6 +251,7 @@ function showSelectedPlan() {
   planContent.appendChild(planName);
   planContent.appendChild(planPrice);
 }
+
 function showSelectedAdd(dataArr) {
   let addOnsContainer = document.querySelector(
     ".summary-page .selected-add-ons"
